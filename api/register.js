@@ -3,6 +3,10 @@ export default async function handler(req, res) {
 
   const { username, password } = req.body;
 
-  // Simulate user storage (in-memory or file-based)
-  res.status(200).json({ message: 'User registered successfully!' });
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Missing username or password' });
+  }
+
+  // Simulate registration success
+  return res.status(200).json({ message: 'User registered successfully!' });
 }
