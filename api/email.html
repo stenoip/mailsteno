@@ -1,122 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>MailSteno - Email</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#f5f5f5; margin:0; padding:0; }
-    header { background:#4a90e2; color:white; padding:0.5rem 1rem; display:flex; align-items:center; }
-    header img { height:40px; margin-right:10px; }
-    main { padding:1rem; }
-    section { background:white; padding:1rem; margin-bottom:1rem; border-radius:8px; }
-    input, textarea, button {
-      width:100%; padding:0.5rem; margin:0.5rem 0; border:1px solid #ccc; border-radius:4px;
-    }
-    button { background:#4a90e2; color:white; font-weight:bold; cursor:pointer; }
-    button:hover { background:#357ab8; }
-    table { width:100%; border-collapse: collapse; }
-    th, td { border:1px solid #ddd; padding:0.5rem; text-align:left; }
-    th { background:#f0f0f0; }
-  </style>
+  <title>Send Email</title>
 </head>
 <body>
-  <header>
-    <img src="https://stenoip.github.io/mailsteno.png" alt="MailSteno Logo">
-    <h1>MailSteno</h1>
-  </header>
+  <h1>Compose Email</h1>
+  <form id="email-form">
+    <input type="email" id="recipient" placeholder="Recipient" required /><br>
+    <input type="text" id="subject" placeholder="Subject" required /><br>
+    <textarea id="body" placeholder="Message" required></textarea><br>
+    <button type="submit">Send</button>
+  </form>
 
-  <main>
-    <!-- Compose Email -->
-    <section>
-      <h2>Compose Email</h2>
-      <form id="sendForm">
-        <input type="text" id="recipient" placeholder="Recipient" required />
-        <input type="text" id="subject" placeholder="Subject" required />
-        <textarea id="body" placeholder="Message" rows="5" required></textarea>
-        <button type="submit">Send Email</button>
-      </form>
-      <p id="sendStatus"></p>
-    </section>
-
-    <!-- Inbox -->
-    <section>
-      <h2>Inbox</h2>
-      <button id="refreshInbox">Refresh</button>
-      <table id="inboxTable">
-        <thead>
-          <tr>
-            <th>From</th>
-            <th>Subject</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- messages will be injected here -->
-        </tbody>
-      </table>
-    </section>
-  </main>
-<p>&copy; Stenoip Company</p>
   <script>
-    const sendForm = document.getElementById('sendForm');
-    const sendStatus = document.getElementById('sendStatus');
-    const inboxTableBody = document.querySelector('#inboxTable tbody');
-    const refreshInboxBtn = document.getElementById('refreshInbox');
-
-    // SEND EMAIL
-    sendForm.addEventListener('submit', async (e) => {
+    document.getElementById('email-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      sendStatus.textContent = "Sending...";
-      const payload = {
-        recipient: document.getElementById('recipient').value,
-        subject: document.getElementById('subject').value,
-        body: document.getElementById('body').value
-      };
+
+      const sender = localStorage.getItem('username');
+      if (!sender) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      const recipient = document.getElementById('recipient').value.trim();
+      const subject = document.getElementById('subject').value.trim();
+      const body = document.getElementById('body').value.trim();
+
       try {
         const res = await fetch('/api/send_email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({ sender, recipient, subject, body })
         });
-        const data = await res.json();
-        sendStatus.textContent = data.message || "Email sent.";
-        sendForm.reset();
-        loadInbox();
-      } catch (err) {
-        sendStatus.textContent = "Error sending email.";
-        console.error(err);
-      }
-    });
 
-    // LOAD INBOX
-    async function loadInbox() {
-      inboxTableBody.innerHTML = "<tr><td colspan='3'>Loading...</td></tr>";
-      try {
-        const res = await fetch('/api/inbox');
-        const emails = await res.json();
-        inboxTableBody.innerHTML = "";
-        if (!emails.length) {
-          inboxTableBody.innerHTML = "<tr><td colspan='3'>No messages.</td></tr>";
-        } else {
-          emails.forEach(email => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td>${email.sender}</td>
-              <td>${email.subject}</td>
-              <td>${new Date(email.timestamp).toLocaleString()}</td>
-            `;
-            inboxTableBody.appendChild(tr);
-          });
+        const data = await res.json();
+        alert(data.message);
+
+        if (res.ok) {
+          document.getElementById('email-form').reset();
         }
       } catch (err) {
-        inboxTableBody.innerHTML = "<tr><td colspan='3'>Error loading inbox.</td></tr>";
         console.error(err);
+        alert('Error sending email.');
       }
-    }
-
-    refreshInboxBtn.addEventListener('click', loadInbox);
-    window.addEventListener('DOMContentLoaded', loadInbox);
+    });
   </script>
 </body>
 </html>
