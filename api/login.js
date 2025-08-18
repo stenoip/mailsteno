@@ -1,6 +1,11 @@
-// pages/api/login.js
-export default function handler(req, res) {
-  // --- CORS headers ---
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ANON_KEY
+);
+
+export default async function handler(req, res) {
   const allowedOrigins = [
     'https://mailsteno.vercel.app',
     'https://mailsteno-git-main-stenoip-companys-projects.vercel.app',
@@ -14,12 +19,8 @@ export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // --- Handle preflight ---
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // --- POST: Login user ---
   if (req.method === 'POST') {
     const { username, password } = req.body;
 
@@ -27,12 +28,25 @@ export default function handler(req, res) {
       return res.status(400).json({ message: 'Username and password required' });
     }
 
-    // TODO: check user credentials in your database
-    console.log(`Logging in user: ${username}`);
+    // Check if user exists and password matches
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .eq('password', password)
+      .maybeSingle();
 
-    // For now, we'll just fake success
-    return res.status(200).json({ message: 'Login successful' });
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Server error during login' });
+    }
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    return res.status(200).json({ message: 'Login successful!' });
   }
 
-  res.status(405).json({ message: 'Method not allowed' });
+  return res.status(405).json({ message: 'Method not allowed' });
 }
