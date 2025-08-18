@@ -28,7 +28,7 @@
       const body = document.getElementById('body').value.trim();
 
       try {
-        const res = await fetch('/api/send_email', {
+        const res = await fetch('https://mailsteno.vercel.app/api/send_email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sender, recipient, subject, body })
