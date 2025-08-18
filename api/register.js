@@ -1,6 +1,12 @@
-// pages/api/register.js
-export default function handler(req, res) {
-  // --- CORS headers ---
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ANON_KEY
+);
+
+export default async function handler(req, res) {
+  // --- CORS ---
   const allowedOrigins = [
     'https://mailsteno.vercel.app',
     'https://mailsteno-git-main-stenoip-companys-projects.vercel.app',
@@ -14,12 +20,8 @@ export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // --- Handle preflight ---
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // --- POST: Register user ---
   if (req.method === 'POST') {
     const { username, password } = req.body;
 
@@ -27,11 +29,34 @@ export default function handler(req, res) {
       return res.status(400).json({ message: 'Username and password required' });
     }
 
-    // TODO: store user in a real database
-    console.log(`Registering user: ${username}`);
+    // Check if username already exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('username')
+      .eq('username', username)
+      .maybeSingle();
 
-    return res.status(201).json({ message: 'Registered successfully' });
+    if (checkError) {
+      console.error(checkError);
+      return res.status(500).json({ message: 'Server error checking user' });
+    }
+
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Insert new user
+    const { error: insertError } = await supabase
+      .from('users')
+      .insert([{ username, password }]);
+
+    if (insertError) {
+      console.error(insertError);
+      return res.status(500).json({ message: 'Error creating user' });
+    }
+
+    return res.status(201).json({ message: 'User registered successfully!' });
   }
 
-  res.status(405).json({ message: 'Method not allowed' });
+  return res.status(405).json({ message: 'Method not allowed' });
 }
