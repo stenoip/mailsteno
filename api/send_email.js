@@ -18,17 +18,16 @@ export default async function handler(req, res) {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method === 'POST') {
-    const { recipient, subject, body } = req.body;
+    const { recipient, subject, body, sender } = req.body;
 
-    if (!recipient || !subject || !body) {
+    if (!recipient || !subject || !body || !sender) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // In a real app, sender could be from the logged-in user session
-    const sender = 'no-reply@mailsteno.com';
     const timestamp = new Date().toISOString();
 
     const { error } = await supabase
