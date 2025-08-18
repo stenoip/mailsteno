@@ -1,42 +1,55 @@
-import { createClient } from '@supabase/supabase-js';
+document.addEventListener('DOMContentLoaded', async () => {
+  const currentUser = localStorage.getItem('username');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ANON_KEY
-);
-
-export default async function handler(req, res) {
-  const allowedOrigins = [
-    'https://mailsteno.vercel.app',
-    'https://mailsteno-git-main-stenoip-companys-projects.vercel.app',
-    'https://mailsteno-kh7g3au58-stenoip-companys-projects.vercel.app',
-    'https://stenoip.github.io'
-  ];
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+  if (!currentUser) {
+    // No user logged in — send them to the login page
+    window.location.href = 'login.html';
+    return;
   }
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  if (req.method === 'GET') {
-    // Replace with logged-in user's username/email in production
-    const recipient = 'no-reply@mailsteno.com';
+  const inboxContainer = document.getElementById('inbox');
+  inboxContainer.innerHTML = '<p>Loading messages...</p>';
 
-    const { data, error } = await supabase
-      .from('emails')
-      .select('*')
-      .eq('recipient', recipient)
-      .order('timestamp', { ascending: false });
+  try {
+    const res = await fetch(`/api/get_emails?recipient=${encodeURIComponent(currentUser)}`);
+    if (!res.ok) throw new Error('Failed to fetch emails');
 
-    if (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'Error fetching inbox' });
+    const emails = await res.json();
+    inboxContainer.innerHTML = '';
+
+    if (!emails || emails.length === 0) {
+      inboxContainer.innerHTML = '<p>No messages in your inbox.</p>';
+      return;
     }
 
-    return res.status(200).json(data);
-  }
+    emails.forEach(email => {
+      const item = document.createElement('div');
+      item.classList.add('email-item');
+      item.innerHTML = `
+        <div class="email-header">
+          <strong>${email.subject}</strong>
+          <span class="timestamp">${new Date(email.timestamp).toLocaleString()}</span>
+        </div>
+        <div class="email-meta">
+          From: ${email.sender}
+        </div>
+        <div class="email-preview">
+          ${email.body.length > 100 ? email.body.slice(0, 100) + '…' : email.body}
+        </div>
+      `;
 
-  return res.status(405).json({ message: 'Method not allowed' });
-}
+      item.addEventListener('click', () => {
+        alert(
+          `From: ${email.sender}\n` +
+          `To: ${email.recipient}\n` +
+          `Subject: ${email.subject}\n\n${email.body}`
+        );
+      });
+
+      inboxContainer.appendChild(item);
+    });
+  } catch (err) {
+    console.error(err);
+    inboxContainer.innerHTML = '<p>Error loading inbox. Please try again later.</p>';
+  }
+});
