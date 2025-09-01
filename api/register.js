@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     'https://mailsteno.vercel.app',
     'https://mailsteno-git-main-stenoip-companys-projects.vercel.app',
     'https://mailsteno-kh7g3au58-stenoip-companys-projects.vercel.app',
-    'https://stenoip.github.io/mailsteno'
+    'https://stenoip.github.io'
   ];
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
@@ -23,7 +23,21 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method === 'POST') {
-    const { username, password } = req.body;
+    let username, password;
+    try {
+      // For some frameworks, req.body might be undefined if bodyParser is disabled
+      if (!req.body || typeof req.body === 'string') {
+        const body = req.body ? JSON.parse(req.body) : {};
+        username = body.username;
+        password = body.password;
+      } else {
+        username = req.body.username;
+        password = req.body.password;
+      }
+    } catch (e) {
+      console.error('Error parsing JSON body:', e);
+      return res.status(400).json({ message: 'Invalid JSON' });
+    }
 
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password required' });
@@ -37,7 +51,7 @@ export default async function handler(req, res) {
       .maybeSingle();
 
     if (checkError) {
-      console.error(checkError);
+      console.error('Supabase user check error:', checkError);
       return res.status(500).json({ message: 'Server error checking user' });
     }
 
@@ -46,12 +60,13 @@ export default async function handler(req, res) {
     }
 
     // Insert new user
-    const { error: insertError } = await supabase
+    const { data, error: insertError } = await supabase
       .from('users')
-      .insert([{ username, password }]);
+      .insert([{ username, password }])
+      .select(); // Return the inserted row for debugging
 
     if (insertError) {
-      console.error(insertError);
+      console.error('Supabase insert error:', insertError);
       return res.status(500).json({ message: 'Error creating user' });
     }
 
