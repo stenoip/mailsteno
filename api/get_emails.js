@@ -1,15 +1,16 @@
-import { createClient } from '@supabase/supabase-js';
+import fs from 'fs';
+import path from 'path';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ANON_KEY
-);
+const emailsFile = path.resolve('./api/emails.json');
+
+function readEmails() {
+  if (!fs.existsSync(emailsFile)) return [];
+  return JSON.parse(fs.readFileSync(emailsFile, 'utf-8'));
+}
 
 export default async function handler(req, res) {
   const allowedOrigins = [
     'https://mailsteno.vercel.app',
-    'https://mailsteno-git-main-stenoip-companys-projects.vercel.app',
-    'https://mailsteno-kh7g3au58-stenoip-companys-projects.vercel.app',
     'https://stenoip.github.io'
   ];
   const origin = req.headers.origin;
@@ -22,24 +23,14 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method === 'GET') {
-    const { recipient } = req.query;
+    const recipient = req.query.recipient;
     if (!recipient) {
       return res.status(400).json({ message: 'Recipient required' });
     }
-
-    const { data, error } = await supabase
-      .from('emails')
-      .select('*')
-      .eq('recipient', recipient)
-      .order('timestamp', { ascending: false });
-
-    if (error) {
-      console.error(error);
-      return res.status(500).json({ message: 'Error fetching emails' });
-    }
-
-    return res.status(200).json(data);
+    let emails = readEmails();
+    const userEmails = emails.filter(email => email.recipient === recipient)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return res.status(200).json(userEmails);
   }
-
   return res.status(405).json({ message: 'Method not allowed' });
 }
