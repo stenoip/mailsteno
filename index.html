@@ -1,21 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
   <title>MailSteno</title>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      if (loggedIn) {
-        window.location.href = '/email.html';
-      } else {
-        window.location.href = '/login.html';
-      }
-    });
-  </script>
 </head>
 <body>
-  Redirecting...
+  <h1>MailSteno</h1>
+
+  <section>
+    <h2>Send Email</h2>
+    <form id="sendForm">
+      <label>To: <input type="email" id="to" required /></label><br />
+      <label>Subject: <input type="text" id="subject" required /></label><br />
+      <label>Reply-To (optional): <input type="email" id="replyTo" /></label><br />
+      <label>Message:</label><br />
+      <textarea id="text" rows="8" cols="60" required></textarea><br />
+      <button type="submit">Send</button>
+    </form>
+    <pre id="sendResult"></pre>
+  </section>
+
+  <section>
+    <h2>Inbox</h2>
+    <button id="refresh">Refresh</button>
+    <ul id="inbox"></ul>
+  </section>
+
+  <script>
+    const API_BASE = 'https://mailsteno.vercel.app'; 
+
+    async function sendEmail(e) {
+      e.preventDefault();
+      const payload = {
+        to: document.getElementById('to').value.trim(),
+        subject: document.getElementById('subject').value.trim(),
+        text: document.getElementById('text').value,
+        replyTo: document.getElementById('replyTo').value.trim() || undefined
+      };
+      const res = await fetch(`${API_BASE}/api/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      document.getElementById('sendResult').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function loadInbox() {
+      const res = await fetch(`${API_BASE}/api/inbox`);
+      const data = await res.json();
+      const ul = document.getElementById('inbox');
+      ul.innerHTML = '';
+      (data.items || []).forEach(msg => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <strong>${msg.subject || '(no subject)'}</strong>
+          from ${msg.from_email} to ${msg.to_email}
+          <br/>${(msg.text || '').slice(0, 200)}
+          <hr/>
+        `;
+        ul.appendChild(li);
+      });
+    }
+
+    document.getElementById('sendForm').addEventListener('submit', sendEmail);
+    document.getElementById('refresh').addEventListener('click', loadInbox);
+    loadInbox();
+  </script>
 </body>
 </html>
