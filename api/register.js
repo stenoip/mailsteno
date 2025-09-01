@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     'https://mailsteno.vercel.app',
     'https://mailsteno-git-main-stenoip-companys-projects.vercel.app',
     'https://mailsteno-kh7g3au58-stenoip-companys-projects.vercel.app',
-    'https://stenoip.github.io'
+    'https://stenoip.github.io/mailsteno'
   ];
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
