@@ -1,12 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+import { Pool } from 'pg';
 
-const usersFile = path.resolve('./api/users.json');
-
-function readUsers() {
-  if (!fs.existsSync(usersFile)) return [];
-  return JSON.parse(fs.readFileSync(usersFile, 'utf-8'));
-}
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
 export default async function handler(req, res) {
   const allowedOrigins = [
@@ -27,12 +24,20 @@ export default async function handler(req, res) {
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password required' });
     }
-    let users = readUsers();
-    const user = users.find(u => u.username === username && u.password === password);
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+    try {
+      const result = await pool.query(
+        'SELECT id FROM users WHERE username = $1 AND password = $2',
+        [username, password]
+      );
+      if (result.rows.length === 0) {
+        return res.status(400).json({ message: 'Invalid credentials' });
+      }
+      return res.status(200).json({ message: 'Login successful!' });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Server error during login' });
     }
-    return res.status(200).json({ message: 'Login successful!' });
   }
+
   return res.status(405).json({ message: 'Method not allowed' });
 }
