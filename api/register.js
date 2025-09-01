@@ -1,18 +1,12 @@
-import fs from 'fs';
-import path from 'path';
+import { Pool } from 'pg';
 
-const usersFile = path.resolve('./api/users.json');
-
-function readUsers() {
-  if (!fs.existsSync(usersFile)) return [];
-  return JSON.parse(fs.readFileSync(usersFile, 'utf-8'));
-}
-
-function writeUsers(users) {
-  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-}
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
 export default async function handler(req, res) {
+  // --- CORS ---
   const allowedOrigins = [
     'https://mailsteno.vercel.app',
     'https://stenoip.github.io'
@@ -31,13 +25,19 @@ export default async function handler(req, res) {
     if (!username || !password) {
       return res.status(400).json({ message: 'Username and password required' });
     }
-    let users = readUsers();
-    if (users.find(u => u.username === username)) {
-      return res.status(400).json({ message: 'User already exists' });
+    try {
+      // Check if user exists
+      const check = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+      if (check.rows.length > 0) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+      // Insert user
+      await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, password]);
+      return res.status(201).json({ message: 'User registered successfully!' });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Server error during registration' });
     }
-    users.push({ username, password });
-    writeUsers(users);
-    return res.status(201).json({ message: 'User registered successfully!' });
   }
 
   return res.status(405).json({ message: 'Method not allowed' });
