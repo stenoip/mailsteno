@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Inbox</title>
+  <style>
+    .email-item { border-bottom: 1px solid #ccc; padding: 10px; cursor: pointer; }
+    .email-header { display: flex; justify-content: space-between; }
+    .email-meta { color: #555; font-size: 0.9em; }
+    .email-preview { margin-top: 0.5em; }
+    #logout-btn { margin-bottom: 15px; }
+    #compose-link { margin-bottom: 15px; display: inline-block; }
+  </style>
+</head>
+<body>
+  <button id="logout-btn">Logout</button>
+  <a href="email.html" id="compose-link">Compose Email</a>
+  <h1>Your Inbox</h1>
+  <div id="inbox"></div>
+  <script src="api/inbox.js"></script>
+  <script>
+    document.getElementById('logout-btn').onclick = function() {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    };
+  </script>
+</body>
+</html>
