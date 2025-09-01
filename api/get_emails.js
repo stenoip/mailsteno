@@ -1,12 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+import { Pool } from 'pg';
 
-const emailsFile = path.resolve('./api/emails.json');
-
-function readEmails() {
-  if (!fs.existsSync(emailsFile)) return [];
-  return JSON.parse(fs.readFileSync(emailsFile, 'utf-8'));
-}
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
 export default async function handler(req, res) {
   const allowedOrigins = [
@@ -23,14 +20,21 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method === 'GET') {
-    const recipient = req.query.recipient;
+    const { recipient } = req.query;
     if (!recipient) {
       return res.status(400).json({ message: 'Recipient required' });
     }
-    let emails = readEmails();
-    const userEmails = emails.filter(email => email.recipient === recipient)
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    return res.status(200).json(userEmails);
+    try {
+      const result = await pool.query(
+        'SELECT * FROM emails WHERE recipient = $1 ORDER BY timestamp DESC',
+        [recipient]
+      );
+      return res.status(200).json(result.rows);
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Error fetching emails' });
+    }
   }
+
   return res.status(405).json({ message: 'Method not allowed' });
 }
