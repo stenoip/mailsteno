@@ -5,6 +5,8 @@
   <title>Send Email</title>
 </head>
 <body>
+  <a href="inbox.html">Back to Inbox</a>
+  <button id="logout-btn" style="float:right;">Logout</button>
   <h1>Compose Email</h1>
   <form id="email-form">
     <input type="email" id="recipient" placeholder="Recipient" required /><br>
@@ -14,6 +16,11 @@
   </form>
 
   <script>
+    document.getElementById('logout-btn').onclick = function() {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    };
+
     document.getElementById('email-form').addEventListener('submit', async (e) => {
       e.preventDefault();
 
